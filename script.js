@@ -50,25 +50,34 @@ window.onkeydown = (e) => {
 };
 window.onkeyup = () => moveDir = 0;
 
-// --- MOBİL EKLEME ---
+// --- MOBİL EKLEME BAŞLANGICI ---
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
-    const touchX = e.touches[0].clientX;
+    const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    const canvasTouchX = (touchX - rect.left) * (canvas.width / rect.width);
+    
+    // Dokunulan noktanın canvas içindeki gerçek X koordinatı
+    const scaleX = canvas.width / rect.width;
+    const canvasTouchX = (touch.clientX - rect.left) * scaleX;
 
     if (!gameActive && gameOverTimer > 30) {
         resetGame();
     } else if (gameActive) {
-        if (canvasTouchX < canvas.width / 2) moveDir = -1;
-        else moveDir = 1;
+        // Tam orta noktaya göre sağ-sol ayrımı
+        if (canvasTouchX < canvas.width / 2) {
+            moveDir = -1; // Sol
+        } else {
+            moveDir = 1;  // Sağ
+        }
         jump();
     }
 }, { passive: false });
 
 canvas.addEventListener("touchend", (e) => {
-    moveDir = 0;
+    e.preventDefault();
+    moveDir = 0; // Parmağını çekince dur
 }, { passive: false });
+// --- MOBİL EKLEME BİTİŞİ ---
 
 function jump() {
     if (!penguin.isJumping && gameActive) {
