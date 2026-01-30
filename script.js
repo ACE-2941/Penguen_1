@@ -50,7 +50,7 @@ window.onkeydown = (e) => {
 };
 window.onkeyup = () => moveDir = 0;
 
-// --- MOBİL EKLEME BAŞLANGICI ---
+// --- MOBİL EKLEME ---
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
     const touchX = e.touches[0].clientX;
@@ -69,7 +69,6 @@ canvas.addEventListener("touchstart", (e) => {
 canvas.addEventListener("touchend", (e) => {
     moveDir = 0;
 }, { passive: false });
-// --- MOBİL EKLEME BİTİŞİ ---
 
 function jump() {
     if (!penguin.isJumping && gameActive) {
