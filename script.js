@@ -9,7 +9,7 @@ let gameActive = true;
 let gameOverTimer = 0;
 
 // AYARLAR
-const kenarPayi = 60; 
+const kenarPayi = 20; // Penguenin kenarlara ne kadar yaklaşabileceği (Ayarladım)
 
 const penguinImg = new Image();
 penguinImg.src = "assets/penguin.png";
@@ -37,7 +37,8 @@ const penguin = {
 
 let obstacles = [];
 let timer = 0;
-let moveDir = 0; // -1: Sol, 1: Sağ, 0: Dur
+let moveDir = 0; 
+let isTouching = false; // Mobilde parmak ekranda mı?
 
 // PC KONTROLLERİ
 window.onkeydown = (e) => {
@@ -48,47 +49,51 @@ window.onkeydown = (e) => {
 };
 window.onkeyup = () => moveDir = 0;
 
-// --- MOBİL BASILI TUTMA MANTIĞI ---
+// --- MOBİL KESİN ÇÖZÜM ---
 
+function getTouchPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const scaleX = canvas.width / rect.width;
+    return (touch.clientX - rect.left) * scaleX;
+}
 
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const canvasTouchX = (touch.clientX - rect.left) * scaleX;
-
+    isTouching = true;
+    const canvasX = getTouchPos(e);
+    
     if (!gameActive) {
         if (gameOverTimer > 30) resetGame();
     } else {
-        // Sağa mı sola mı basıldı karar ver
-        moveDir = (canvasTouchX < canvas.width / 2) ? -1 : 1;
+        moveDir = (canvasX < canvas.width / 2) ? -1 : 1;
         jump();
     }
 }, { passive: false });
 
-// Parmağını ekranda hareket ettirirsen (sağdan sola geçersen) yön değişsin
 canvas.addEventListener("touchmove", (e) => {
     e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const canvasTouchX = (touch.clientX - rect.left) * scaleX;
-    
-    if (gameActive) {
-        moveDir = (canvasTouchX < canvas.width / 2) ? -1 : 1;
-    }
+    const canvasX = getTouchPos(e);
+    moveDir = (canvasX < canvas.width / 2) ? -1 : 1;
 }, { passive: false });
 
-// Parmağını çektiğin an penguen dursun
 canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
-    moveDir = 0; 
+    isTouching = false;
+    moveDir = 0; // Parmağını çektiği an dursun
 }, { passive: false });
+
+// --- MOBİL BİTİŞ ---
 
 function jump() {
     if (!penguin.isJumping && gameActive) {
         penguin.velocityY = -16;
         penguin.isJumping = true;
         penguin.frameY = 2;
-        penguin
+        penguin.maxFrames = 2;
+    }
+}
+
+function resetGame() {
+    puan = 0; obstacles = []; gameActive = true;
+    gameOverTimer = 0; penguin.x = 130; penguin.y =
