@@ -8,9 +8,7 @@ let puan = 0;
 let gameActive = true;
 let gameOverTimer = 0;
 
-// KENAR AYARI: Penguenin ekrandan hiç çıkmamasını sağlar
-const kenarPayi = 10; 
-
+// ASSETLER
 const penguinImg = new Image();
 penguinImg.src = "assets/penguin.png";
 const bgImg = new Image();
@@ -48,45 +46,45 @@ window.onkeydown = (e) => {
 };
 window.onkeyup = () => moveDir = 0;
 
-// --- MOBİL YAVAŞLATILMIŞ KONTROL ---
-function getTouchX(e) {
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    const scaleX = canvas.width / rect.width;
-    return (touch.clientX - rect.left) * scaleX;
-}
-
-canvas.addEventListener("touchstart", (e) => {
+// --- MOBİL: SİLİNMEYİ ENGELLEYEN KONTROL ---
+function handleMobile(e) {
     e.preventDefault();
     if (!gameActive) {
         if (gameOverTimer > 30) resetGame();
         return;
     }
-    const canvasX = getTouchX(e);
-    moveDir = (canvasX < canvas.width / 2) ? -1 : 1;
-    jump();
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const scaleX = canvas.width / rect.width;
+    const canvasX = (touch.clientX - rect.left) * scaleX;
+
+    // Koordinatın geçerli bir sayı olduğundan emin ol (Silinmeyi önler)
+    if (!isNaN(canvasX)) {
+        moveDir = (canvasX < canvas.width / 2) ? -1 : 1;
+    }
+}
+
+canvas.addEventListener("touchstart", (e) => {
+    handleMobile(e);
+    if (gameActive) jump();
 }, { passive: false });
 
 canvas.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-    if (gameActive) {
-        const canvasX = getTouchX(e);
-        moveDir = (canvasX < canvas.width / 2) ? -1 : 1;
-    }
+    handleMobile(e);
 }, { passive: false });
 
 canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
-    moveDir = 0; // Parmağını çektiği an DURUR
+    moveDir = 0; 
 }, { passive: false });
 
-// --- MANTIK ---
+// --- OYUN FONKSİYONLARI ---
 
 function jump() {
     if (!penguin.isJumping && gameActive) {
         penguin.velocityY = -16;
         penguin.isJumping = true;
-        penguin.frameY = 2;
+        penguin.frameY = 2; // Zıplama animasyonu
         penguin.maxFrames = 2;
     }
 }
@@ -103,9 +101,10 @@ function update() {
         return;
     }
 
-    // --- HIZI BURADAN AYARLIYORUZ (Şu an çok yavaş: 2.5) ---
-    penguin.x += moveDir * 2.5; 
+    // Yürüme hızı yavaş ve stabil
+    penguin.x += moveDir * 4; 
     
+    // Zıplama fiziği
     penguin.y += penguin.velocityY;
     penguin.velocityY += penguin.gravity;
 
@@ -113,18 +112,17 @@ function update() {
         penguin.y = 500;
         penguin.isJumping = false;
         penguin.velocityY = 0;
-        penguin.frameY = 0;
+        penguin.frameY = 0; 
         penguin.maxFrames = 5;
     }
 
-    // SERT DUVARLAR: Penguenin burnu bile ekrandan çıkamaz
+    // Sınırlar: Penguenin ekrandan silinmesini/çıkmasını engeller
     if (penguin.x < 0) penguin.x = 0;
     if (penguin.x > canvas.width - penguin.w) penguin.x = canvas.width - penguin.w;
 
+    // Engel yönetimi
     let oyunHizi = (puan < 100) ? 3 : 3 + (puan - 100) * 0.05;
-    let uretimSikligi = (puan < 100) ? 80 : 55;
-
-    if (++timer > uretimSikligi) {
+    if (++timer > 80) {
         obstacles.push({ x: Math.random() * (canvas.width - 50), y: -100, w: 50, h: 80, hitW: 30, hitH: 60 });
         timer = 0;
     }
@@ -133,59 +131,4 @@ function update() {
         o.y += oyunHizi;
         if (o.y > canvas.height) { obstacles.splice(i, 1); puan++; }
         
-        let pCenterX = penguin.x + penguin.w / 2;
-        let pCenterY = penguin.y + penguin.h / 2;
-        let bCenterX = o.x + o.w / 2;
-        let bCenterY = o.y + o.h / 2;
-
-        if (Math.abs(pCenterX - bCenterX) < (penguin.hitW + o.hitW) / 2 &&
-            Math.abs(pCenterY - bCenterY) < (penguin.hitH + o.hitH) / 2) {
-            gameActive = false;
-        }
-    });
-
-    penguin.fps++;
-    if (penguin.fps % penguin.stagger === 0) {
-        penguin.frameX = (penguin.frameX + 1) % penguin.maxFrames;
-    }
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (bgImg.complete) ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-    if (penguinImg.complete) {
-        ctx.drawImage(penguinImg, penguin.frameX * 64, penguin.frameY * 40, 64, 40, penguin.x, penguin.y, penguin.w, penguin.h);
-    }
-    obstacles.forEach(o => {
-        if (buzImg.complete) {
-            ctx.save();
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = "black";
-            ctx.drawImage(buzImg, o.x, o.y, o.w, o.h);
-            ctx.restore();
-        }
-    });
-    ctx.fillStyle = "white";
-    ctx.font = "bold 26px Arial";
-    ctx.shadowBlur = 4;
-    ctx.shadowColor = "black";
-    ctx.fillText("PUAN: " + puan, 20, 45);
-
-    if (!gameActive) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "yellow";
-        ctx.font = "bold 36px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Penguen Finito", canvas.width / 2, canvas.height / 2);
-        ctx.fillStyle = "white";
-        ctx.font = "20px Arial";
-        ctx.fillText("HAYAT BITTI EKRANA BAS", canvas.width / 2, canvas.height / 2 + 50);
-        ctx.textAlign = "left";
-    }
-}
-
-function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
-canvas.addEventListener("mousedown", () => { if (!gameActive && gameOverTimer > 30) resetGame(); });
-gameLoop();
+        let pCenterX = penguin.x +
