@@ -42,6 +42,7 @@ let obstacles = [];
 let timer = 0;
 let moveDir = 0;
 
+// PC KONTROLLERİ
 window.onkeydown = (e) => {
     if (e.key === "ArrowLeft") moveDir = -1;
     if (e.key === "ArrowRight") moveDir = 1;
@@ -50,34 +51,35 @@ window.onkeydown = (e) => {
 };
 window.onkeyup = () => moveDir = 0;
 
-// --- MOBİL EKLEME BAŞLANGICI ---
+// --- MOBİL EKLEME (TAM İSTEDİĞİN GİBİ) ---
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     
-    // Dokunulan noktanın canvas içindeki gerçek X koordinatı
+    // Canvas'ın ekrandaki gerçek boyutuna göre oranlama (Hata payını siler)
     const scaleX = canvas.width / rect.width;
     const canvasTouchX = (touch.clientX - rect.left) * scaleX;
 
-    if (!gameActive && gameOverTimer > 30) {
-        resetGame();
-    } else if (gameActive) {
-        // Tam orta noktaya göre sağ-sol ayrımı
+    if (!gameActive) {
+        if (gameOverTimer > 30) resetGame();
+    } else {
+        // Ekranın sol yarısına basınca sola, sağına basınca sağa yürür
         if (canvasTouchX < canvas.width / 2) {
-            moveDir = -1; // Sol
+            moveDir = -1; 
         } else {
-            moveDir = 1;  // Sağ
+            moveDir = 1;
         }
-        jump();
+        jump(); // Basınca aynı zamanda zıplatır
     }
 }, { passive: false });
 
 canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
-    moveDir = 0; // Parmağını çekince dur
+    moveDir = 0; // Parmağını çekince yürümeyi durdurur (Ok tuşunu bırakmak gibi)
 }, { passive: false });
-// --- MOBİL EKLEME BİTİŞİ ---
+
+// --- MOBİL EKLEME BİTİŞ ---
 
 function jump() {
     if (!penguin.isJumping && gameActive) {
@@ -105,6 +107,7 @@ function update() {
         return;
     }
 
+    // Yürüme mantığı (Senin orijinal hızın: 9)
     penguin.x += moveDir * 9;
     penguin.y += penguin.velocityY;
     penguin.velocityY += penguin.gravity;
@@ -169,43 +172,3 @@ function draw() {
     if (penguinImg.complete) {
         ctx.drawImage(penguinImg, penguin.frameX * 64, penguin.frameY * 40, 64, 40, penguin.x, penguin.y, penguin.w, penguin.h);
     }
-
-    obstacles.forEach(o => {
-        if (buzImg.complete) {
-            ctx.save();
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = "black";
-            ctx.drawImage(buzImg, o.x, o.y, o.w, o.h);
-            ctx.restore();
-        }
-    });
-
-    ctx.fillStyle = "white";
-    ctx.font = "bold 26px Arial";
-    ctx.shadowBlur = 4;
-    ctx.shadowColor = "black";
-    ctx.fillText("PUAN: " + puan, 20, 45);
-
-    if (!gameActive) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "yellow";
-        ctx.font = "bold 36px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Penguen Finito", canvas.width / 2, canvas.height / 2);
-        ctx.fillStyle = "white";
-        ctx.font = "20px Arial";
-        ctx.fillText("HAYAT BITTI EKRANA BAS", canvas.width / 2, canvas.height / 2 + 50);
-        ctx.textAlign = "left";
-    }
-}
-
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
-
-canvas.addEventListener("mousedown", () => { if (!gameActive) resetGame(); });
-gameLoop();
