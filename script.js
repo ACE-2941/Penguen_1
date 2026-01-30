@@ -8,8 +8,8 @@ let puan = 0;
 let gameActive = true;
 let gameOverTimer = 0;
 
-// AYARLAR
-const kenarPayi = 20; // Penguenin kenarlara ne kadar yaklaşabileceği (Ayarladım)
+// AYARLAR - Kenar sınırlarını penguenin yarısı dışarıda kalacak şekilde güncelledim
+const kenarPayi = 30; 
 
 const penguinImg = new Image();
 penguinImg.src = "assets/penguin.png";
@@ -38,7 +38,6 @@ const penguin = {
 let obstacles = [];
 let timer = 0;
 let moveDir = 0; 
-let isTouching = false; // Mobilde parmak ekranda mı?
 
 // PC KONTROLLERİ
 window.onkeydown = (e) => {
@@ -49,41 +48,37 @@ window.onkeydown = (e) => {
 };
 window.onkeyup = () => moveDir = 0;
 
-// --- MOBİL KESİN ÇÖZÜM ---
-
-function getTouchPos(e) {
+// --- MOBİL KONTROLLER ---
+function handleTouch(e) {
+    e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
     const scaleX = canvas.width / rect.width;
-    return (touch.clientX - rect.left) * scaleX;
-}
+    const canvasX = (touch.clientX - rect.left) * scaleX;
 
-canvas.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    isTouching = true;
-    const canvasX = getTouchPos(e);
-    
     if (!gameActive) {
         if (gameOverTimer > 30) resetGame();
     } else {
+        // Sol %50 mi sağ %50 mi?
         moveDir = (canvasX < canvas.width / 2) ? -1 : 1;
-        jump();
     }
+}
+
+canvas.addEventListener("touchstart", (e) => {
+    handleTouch(e);
+    if (gameActive) jump();
 }, { passive: false });
 
 canvas.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-    const canvasX = getTouchPos(e);
-    moveDir = (canvasX < canvas.width / 2) ? -1 : 1;
+    handleTouch(e);
 }, { passive: false });
 
 canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
-    isTouching = false;
-    moveDir = 0; // Parmağını çektiği an dursun
+    moveDir = 0; 
 }, { passive: false });
 
-// --- MOBİL BİTİŞ ---
+// --- MANTIK ---
 
 function jump() {
     if (!penguin.isJumping && gameActive) {
@@ -96,4 +91,39 @@ function jump() {
 
 function resetGame() {
     puan = 0; obstacles = []; gameActive = true;
-    gameOverTimer = 0; penguin.x = 130; penguin.y =
+    gameOverTimer = 0; penguin.x = 130; penguin.y = 500;
+    penguin.velocityY = 0; timer = 0; moveDir = 0;
+}
+
+function update() {
+    if (!gameActive) {
+        gameOverTimer++;
+        return;
+    }
+
+    // HIZ AYARI: 9'dan 4'e düşürdüm. Çok daha yavaş ve kontrollü.
+    penguin.x += moveDir * 4; 
+    
+    penguin.y += penguin.velocityY;
+    penguin.velocityY += penguin.gravity;
+
+    if (penguin.y > 500) {
+        penguin.y = 500;
+        penguin.isJumping = false;
+        penguin.velocityY = 0;
+        penguin.frameY = 0;
+        penguin.maxFrames = 5;
+    }
+
+    // EKRAN SINIRLARI (Penguenin ekrandan tamamen çıkmasını önler)
+    if (penguin.x < -kenarPayi) penguin.x = -kenarPayi;
+    if (penguin.x > canvas.width - penguin.w + kenarPayi) {
+        penguin.x = canvas.width - penguin.w + kenarPayi;
+    }
+
+    // Zorluk dengesi
+    let oyunHizi = (puan < 100) ? 3 : 3 + (puan - 100) * 0.05;
+    let uretimSikligi = (puan < 100) ? 80 : 55;
+
+    if (++timer > uretimSikligi) {
+        obstacles.push({ x: Math.random() * (canvas.width - 50), y: -100, w: 50, h: 80, hit
